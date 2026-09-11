@@ -1,152 +1,99 @@
 ---
 name: speckit-baseline
-description: Generate feature specifications by analyzing existing source code.
+description: 从现有源代码反向生成功能规格说明（spec）。当需要为遗留代码补写需求文档、在重构或迁移前固化现有行为、或接手无文档的代码库时使用。产出的规格结构沿用 GitHub Spec Kit 约定。
+license: MIT
 ---
 
-# Spec Kit Baseline Skill
+# speckit-baseline
+
+> **来源说明**：本技能产出的**规格结构**沿用 [GitHub Spec Kit](https://github.com/github/spec-kit)
+> 的模板约定（MIT License, Copyright GitHub, Inc.，完整文本见同目录 `LICENSE.txt`）。
+> **"从现有代码反向提取需求"的执行流程**为本项目原创，不属于 Spec Kit 官方命令集。
 
 ## When to Use
 
-- You need a spec for existing or legacy code.
-- You want to document a feature before refactoring.
-- You inherited a codebase without written requirements.
+- 代码库缺少需求文档，需要补齐一份可信的规格。
+- 重构、迁移或交接之前，要先把**现有实际行为**固化成可审阅的基线。
+- 接手无文档的遗留系统，需要区分"当前行为"与"应有行为"。
 
 ## Inputs
 
-- A target path, file list, or glob pattern describing the code to analyze.
-- Repo context with `.specify/` scripts and templates.
+- **目标范围**：路径、文件清单、模块名或 glob 模式。
+- **代码库上下文**：需要能读取源码；若存在 `.specify/` 目录，一并读取其中的模板与脚本。
+- **可选业务背景**：领域术语、用户角色、外部依赖方。
 
-If the target is missing or ambiguous, ask a focused question before continuing.
-
-## Goal
-
-Generate a technology-agnostic spec for existing code, then create the feature branch/spec file using the standard Spec Kit templates.
+如果目标范围缺失或有歧义，先提出一个聚焦的问题再继续。
 
 ## Workflow
 
-1. **Parse target input**: Identify files, directories, or patterns to analyze.
-   - Accept file paths, glob patterns, or directory paths.
-   - If empty: stop and ask for a concrete target.
+### Step 1 — 界定范围
 
-2. **Discover and read source files**:
-   - Expand globs to a file list.
-   - Read file contents for analysis.
-   - Identify primary language(s) and frameworks.
-   - Map key file relationships and dependencies.
+确认要分析的最小完整单元：一个模块、一组接口，或一条端到端流程。
+范围过大会产出泛泛而谈的规格；范围过小则无法形成完整需求。
 
-3. **Analyze code structure**:
-   - Identify entry points and public interfaces.
-   - Extract function/method signatures and behaviors.
-   - Find data models and entities.
-   - Detect API endpoints and routes.
-   - Identify user-facing functionality.
+### Step 2 — 提取可观察行为
 
-4. **Generate a short name** (2-4 words) from the analyzed code:
-   - Use action-noun format (e.g., "user-auth", "payment-processing").
-   - Base on primary functionality discovered.
-   - Preserve technical terms where meaningful.
+从代码中收集事实，逐项记录**证据位置**（文件与行号）：
 
-5. **Create the feature branch and spec file**:
-   - Find the highest existing feature number for this short name (branches/specs).
-   - Run `.specify/scripts/bash/create-new-feature.sh --json` with the calculated number and short name.
-   - Read BRANCH_NAME, FEATURE_DIR, and SPEC_FILE paths from the script JSON output.
-   - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+- 入口点：HTTP 路由、CLI 参数、事件消费者、公开 API。
+- 输入与校验：接受的字段、类型、约束、默认值。
+- 输出与副作用：响应结构、写入的存储、发出的事件、外部调用。
+- 错误路径：抛出的异常、返回的错误码、重试与降级逻辑。
+- 状态与生命周期：持久化模型、状态机、并发假设。
 
-6. **Load the spec template** from `.specify/templates/spec-template.md`.
+> 只记录代码中**可观察到**的行为。不要根据命名或注释推测设计意图。
 
-7. **Draft the specification** using the template structure:
-   - **User Stories**: Infer from user-facing code paths and interactions.
-   - **Acceptance Scenarios**: Derive from validation logic, error handling, and tests.
-   - **Functional Requirements**: Extract from business rules and constraints.
-   - **Key Entities**: Identify from data models and schemas.
-   - **Success Criteria**: Infer from metrics, logging, or performance-related code.
-   - **Assumptions**: Document inferences made during analysis.
+### Step 3 — 归纳为需求
 
-8. **Abstract implementation details**:
-   - Convert technical patterns to user-focused requirements.
-   - Remove framework-specific terminology.
-   - Focus on WHAT the code does, not HOW it does it.
+把散落的行为事实聚合成"用户/系统能做什么"的陈述：
 
-9. **Create spec quality checklist** at `FEATURE_DIR/checklists/requirements.md`.
+- 每个需求必须**可测试**——给定输入，能判断是否满足。
+- 保留现有行为中**有意设计**与**历史包袱**的区别：拿不准的归入假设或待澄清，不要替代码作者辩解。
+- 发现的缺口（如未处理的边界情况）单独列出，不要直接写成需求。
 
-10. **Report completion** with:
-    - Branch name and spec file path.
-    - Summary of analyzed files.
-    - Key features discovered.
-    - Areas needing clarification or review.
+### Step 4 — 按 Spec Kit 结构产出 spec.md
+
+写入 `specs/<feature>/spec.md`，章节结构沿用 Spec Kit 约定（见下节）。
+若 `.specify/templates/spec-template.md` 存在，以它为准。
+
+### Step 5 — 标注不确定项与假设
+
+- 最多保留 **3 个 `[NEEDS CLARIFICATION]` 标记**，只用于影响范围、安全或用户体验的关键分歧。
+- 其余不确定处写入 **Assumptions** 章节，记录采用的合理默认值。
+
+## 规格结构（沿用 Spec Kit 约定）
+
+- **Mandatory sections**：每个功能都必须完成。
+- **Optional sections**：仅在相关时纳入。
+- 某章节不适用时**整节删除**，不要留 "N/A"。
+
+**质量要求**（与 Spec Kit 一致）：
+
+1. 优先用上下文和行业惯例填补空白，而不是提问。
+2. 把采用的默认值记入 Assumptions 章节。
+3. 澄清问题按优先级排序：范围 > 安全/隐私 > 用户体验 > 技术细节。
+4. 用测试者视角审视：含糊的需求应当无法通过"可测试且无歧义"检查。
+
+## 成功标准（Success Criteria）
+
+成功标准必须满足：
+
+1. **可度量** —— 含具体指标（时间、百分比、数量、比率）。
+2. **与技术无关** —— 不提及框架、语言、数据库或工具。
+3. **以用户为中心** —— 描述用户/业务视角的结果，而非系统内部结构。
+4. **可验证** —— 无需了解实现细节即可检验。
+
+示例（好）："用户可在 3 分钟内完成结账"、"95% 的搜索在 1 秒内返回结果"。
+示例（差）："API 响应时间低于 200ms"、"Redis 缓存命中率高于 80%"。
 
 ## Outputs
 
-- `specs/<feature>/spec.md`
-- `specs/<feature>/checklists/requirements.md`
+- `specs/<feature>/spec.md` —— 反向生成的基线规格。
+- 若发现实现缺口：在汇报中单列"与现有实现的差异"，不写入规格正文。
 
-## Key rules
+## Guardrails
 
-- Focus on extracting WHAT and WHY from HOW.
-- Abstract away implementation details in the generated spec.
-- Document assumptions made during code analysis.
-- Flag areas where code behavior is unclear.
-- Preserve discovered business rules and constraints.
-- Use `[NEEDS CLARIFICATION]` for ambiguous code sections (max 3).
-- Generated specs should be validated by someone who knows the feature.
-
-## Examples
-
-**Code Pattern → Spec Requirement**:
-
-- `if (user.role === 'admin')` → "System MUST restrict action to administrator users"
-- `password.length >= 8` → "Passwords MUST be at least 8 characters"
-- `cache.set(key, value, 3600)` → "System MUST cache results for improved performance"
-- `try { ... } catch (e) { notify(e) }` → "System MUST notify users when errors occur"
-
-**Code Pattern → User Story**:
-
-- Login endpoint with OAuth → "As a user, I can sign in using my social account"
-- Shopping cart logic → "As a customer, I can add items to my cart for later purchase"
-- Report generation → "As an analyst, I can generate reports on system activity"
-
-## Next Steps
-
-After generating spec.md:
-
-- **Clarify** with domain experts using speckit-clarify.
-- **Plan** modernization/refactoring with speckit-plan.
-- **Compare** the generated spec with actual requirements to identify gaps.
-
-## 国内适配
-
-- 支持中文文档和中文注释
-- 示例代码兼容国内开发环境
-- 提供中文 FAQ 和常见问题解答
-
-## 能力边界
-
-### ✅ 适用场景
-- 当你需要使用此技能对应的技术栈时
-- 当项目需要遵循最佳实践时
-- 当需要快速上手或深入理解核心概念时
-
-### ⚠️ 需要注意
-- 复杂业务逻辑需要结合具体场景调整
-- 性能优化需要根据实际数据量评估
-
-### ❌ 不适用场景
-- 不相关的技术栈或框架
-- 需要完全自定义的特殊场景
-
-## 使用流程
-
-### Step 1: 环境准备
-确保开发环境已安装必要的依赖和工具。
-
-### Step 2: 配置初始化
-根据项目需求进行基础配置。
-
-### Step 3: 核心功能使用
-按照示例代码实现核心功能。
-
-### Step 4: 测试验证
-运行测试确保功能正常。
-
-### Step 5: 部署上线
-完成开发后进行部署和监控。
+- **不臆测意图**：代码没做的事，不写成需求。
+- **区分基线与目标**：本技能产出的是"当前行为基线"，不是"期望状态"。
+- **证据可追溯**：每条需求应能回溯到具体代码位置。
+- **不修改代码**：这是只读分析流程，产出物只有规格文档。

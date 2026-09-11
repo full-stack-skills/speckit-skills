@@ -1,5 +1,6 @@
 ---
 name: speckit-initial
+license: Apache-2.0
 description: Run `specify init` in the current or target directory to bootstrap a Spec Kit project (pull .specify/ and slash commands); supports multiple AI agents and --script sh/ps. Use when the user says "initialize Spec Kit project", "specify init", or "set up Spec Kit in this repo".
 ---
 

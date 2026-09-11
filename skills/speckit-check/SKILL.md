@@ -1,5 +1,6 @@
 ---
 name: speckit-check
+license: Apache-2.0
 description: Run `specify check` to verify that Spec Kit required tools (git, claude, gemini, code, cursor-agent, windsurf, qwen, opencode, codex, shai, qoder, etc.) are installed and available; interpret results and suggest next steps. Use when the user says "check Spec Kit environment", "specify not working", or "slash commands not showing".
 ---
 
